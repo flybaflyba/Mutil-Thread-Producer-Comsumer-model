@@ -14,11 +14,19 @@ void *consume(void * arg);
 int sum;
 sem_t sum_lock;
 
+int A;
+sem_t a_lock;
+
+int B;
+sem_t b_lock;
+
 int main(int argc, char **argv) {
     
     int num_threads;
     sum = 0;
     pthread_t * threads;
+    A = 0;
+    B = 0;
     
     if (argc < 2) {
         printf("usage: %s [NUM ITERATIONS]\n", argv[0]);
@@ -33,28 +41,41 @@ int main(int argc, char **argv) {
         perror("Error initizing sum_lock");
         return 0;
     }
+    if (sem_init(&a_lock, 0, 1) < 0) { 
+        perror("Error initizing a_lock");
+        return 0;
+    }
+    if (sem_init(&b_lock, 0, 1) < 0) { 
+        perror("Error initizing b_lock");
+        return 0;
+    }
     
     
     printf("Launching %d threads\n", num_threads);
 
-    for (int i=0; i<=num_threads/2; i+=2) {
-        long thread_id_consumer = (long)(i+1);
-        if (pthread_create(&threads[i+1], NULL, &consume, (void *)thread_id_consumer) != 0) {
+    for (int i=0; i<num_threads/2; i++) {
+        printf("------ %d \n", i);
+        
+        long thread_id_consumer = (long)(num_threads - i);
+        if (pthread_create(&threads[num_threads - i], NULL, &consume, (void *)thread_id_consumer) != 0) {
             perror("Error");
         }
         long thread_id_producer = (long)i;
         if (pthread_create(&threads[i], NULL, &produce, (void *)thread_id_producer) != 0) {
             perror("Error");
         }
+       
      
     }
     
     // keep the threads running after main thread finished
-    for (int i=0; i<num_threads; i++) {
+    for (int i=0; i<=num_threads; i++) {
         pthread_join(threads[i], NULL);
     }
     
     printf("Sum = %d\n", sum);
+    printf("A = %d\n", A);
+    printf("B = %d\n", B);
     
     
     return 0;
@@ -80,26 +101,42 @@ void *produce(void *arg) {
     int t_id = (int)(long)arg;
     int temp;
     printf("Producer thread %d launched ...\n", t_id);
-    for (int n=0; n<100; n++) {
-        sem_wait(&sum_lock);
-        temp = sum; 
-        usleep(5);
-        temp++;
-        sum = temp; 
-        sem_post(&sum_lock);
-    }
+   
+    sem_wait(&a_lock);
+    A = A + 1;
+    printf("PA--%d\n", A);
+    usleep(5);
+    sem_post(&a_lock);
+    
+    sem_wait(&b_lock);
+    B = B + 2; 
+    printf("PB--%d\n", B);
+    usleep(5);
+    sem_post(&b_lock);
+    
+    printf("P finished\n");
+    
+
+    
 }
 
 void *consume(void *arg) {
     int t_id = (int)(long)arg;
     int temp;
     printf("Consumer thread %d launched ...\n", t_id);
-    for (int n=0; n<100; n++) {
-        sem_wait(&sum_lock); 
-        temp = sum; 
-        usleep(5);
-        temp++;
-        sum = temp; 
-        sem_post(&sum_lock);
-    }
+    
+    sem_wait(&b_lock);
+    B = B + 3; 
+    printf("CB--%d\n", B);
+    usleep(5);
+    sem_post(&b_lock);
+
+    sem_wait(&a_lock);
+    A = A + 1; 
+    printf("CA--%d\n", A);
+    usleep(5);
+    sem_post(&a_lock);
+    
+      printf("C finished\n");
+    
 }
