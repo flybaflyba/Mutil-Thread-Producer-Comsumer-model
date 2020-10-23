@@ -3,9 +3,13 @@
 #include <stdlib.h>
 #include <pthread.h>
 #include <unistd.h>
-#include <semaphore.h> // allows more than 1 threads to access, we dont do this here though
+#include <semaphore.h> // allows more than 1 threads to access, we dont do this here though // mutex can only be 0 or one 
 
 void *do_math(void * arg); //void * a pointer that can point to anything
+
+void *produce(void * arg); 
+
+void *consume(void * arg); 
 
 int sum;
 sem_t sum_lock;
@@ -33,11 +37,16 @@ int main(int argc, char **argv) {
     
     printf("Launching %d threads\n", num_threads);
 
-    for (int i=0; i<num_threads; i++) {
-        long thread_id = (long)i;
-        if (pthread_create(&threads[i], NULL, &do_math, (void *)thread_id) != 0) {
+    for (int i=0; i<=num_threads/2; i+=2) {
+        long thread_id_consumer = (long)(i+1);
+        if (pthread_create(&threads[i+1], NULL, &consume, (void *)thread_id_consumer) != 0) {
             perror("Error");
         }
+        long thread_id_producer = (long)i;
+        if (pthread_create(&threads[i], NULL, &produce, (void *)thread_id_producer) != 0) {
+            perror("Error");
+        }
+     
     }
     
     // keep the threads running after main thread finished
@@ -47,7 +56,6 @@ int main(int argc, char **argv) {
     
     printf("Sum = %d\n", sum);
     
-   
     
     return 0;
 }
@@ -65,5 +73,33 @@ void *do_math(void *arg) {
         temp++;
         sum = temp; 
         sem_post(&sum_lock); // sum_lock is incremented 1 to 1 now, one threaad can get in 
+    }
+}
+
+void *produce(void *arg) {
+    int t_id = (int)(long)arg;
+    int temp;
+    printf("Producer thread %d launched ...\n", t_id);
+    for (int n=0; n<100; n++) {
+        sem_wait(&sum_lock);
+        temp = sum; 
+        usleep(5);
+        temp++;
+        sum = temp; 
+        sem_post(&sum_lock);
+    }
+}
+
+void *consume(void *arg) {
+    int t_id = (int)(long)arg;
+    int temp;
+    printf("Consumer thread %d launched ...\n", t_id);
+    for (int n=0; n<100; n++) {
+        sem_wait(&sum_lock); 
+        temp = sum; 
+        usleep(5);
+        temp++;
+        sum = temp; 
+        sem_post(&sum_lock);
     }
 }
