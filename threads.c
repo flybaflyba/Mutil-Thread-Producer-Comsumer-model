@@ -2,6 +2,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <pthread.h>
+#include <unistd.h>
 
 void *do_math(void * arg); //void * a pointer that can point to anything
 
@@ -43,10 +44,16 @@ int main(int argc, char **argv) {
     return 0;
 }
 
+// all threads can access to sum, becasue sum is global variable 
+
 void *do_math(void *arg) {
     int t_id = (int)(long)arg;
+    int temp;
     printf("Thread %d launched ...\n", t_id);
     for (int n=0; n<100; n++) {
-        sum++;
+        temp = sum;
+        usleep(5);
+        temp++;
+        sum = temp;
     }
 }
