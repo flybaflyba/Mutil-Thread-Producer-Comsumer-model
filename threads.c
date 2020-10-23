@@ -54,7 +54,7 @@ int main(int argc, char **argv) {
     printf("Launching %d threads\n", num_threads);
 
     for (int i=0; i<num_threads/2; i++) {
-        printf("------ %d \n", i);
+        //printf("------ %d \n", i);
         
         long thread_id_consumer = (long)(num_threads - i);
         if (pthread_create(&threads[num_threads - i], NULL, &consume, (void *)thread_id_consumer) != 0) {
@@ -64,16 +64,15 @@ int main(int argc, char **argv) {
         if (pthread_create(&threads[i], NULL, &produce, (void *)thread_id_producer) != 0) {
             perror("Error");
         }
-       
      
     }
     
     // keep the threads running after main thread finished
     for (int i=0; i<=num_threads; i++) {
-        pthread_join(threads[i], NULL);
+        pthread_join(threads[i], NULL); // the i here is what we set above, becasue I used num_threads - i and i can be 0, so here I need to use <= 
     }
     
-    printf("Sum = %d\n", sum);
+    //printf("Sum = %d\n", sum);
     printf("A = %d\n", A);
     printf("B = %d\n", B);
     
@@ -97,26 +96,17 @@ void *do_math(void *arg) {
     }
 }
 
+
+
+
 void *produce(void *arg) {
     int t_id = (int)(long)arg;
     int temp;
     printf("Producer thread %d launched ...\n", t_id);
    
-    sem_wait(&a_lock);
-    A = A + 1;
-    printf("PA--%d\n", A);
-    usleep(5);
-    sem_post(&a_lock);
+ 
     
-    sem_wait(&b_lock);
-    B = B + 2; 
-    printf("PB--%d\n", B);
-    usleep(5);
-    sem_post(&b_lock);
-    
-    printf("P finished\n");
-    
-
+    //printf("P finished\n");
     
 }
 
@@ -125,18 +115,51 @@ void *consume(void *arg) {
     int temp;
     printf("Consumer thread %d launched ...\n", t_id);
     
-    sem_wait(&b_lock);
-    B = B + 3; 
-    printf("CB--%d\n", B);
-    usleep(5);
-    sem_post(&b_lock);
-
-    sem_wait(&a_lock);
-    A = A + 1; 
-    printf("CA--%d\n", A);
-    usleep(5);
-    sem_post(&a_lock);
     
-      printf("C finished\n");
+    
+    //printf("C finished\n");
     
 }
+
+
+// void *produce(void *arg) {
+//     int t_id = (int)(long)arg;
+//     int temp;
+//     printf("Producer thread %d launched ...\n", t_id);
+   
+//     sem_wait(&a_lock);
+//     A = A + 1;
+//     //printf("PA--%d\n", A);
+//     usleep(5);
+//     sem_post(&a_lock);
+    
+//     sem_wait(&b_lock);
+//     B = B + 2; 
+//     //printf("PB--%d\n", B);
+//     usleep(5);
+//     sem_post(&b_lock);
+    
+//     //printf("P finished\n");
+    
+// }
+
+// void *consume(void *arg) {
+//     int t_id = (int)(long)arg;
+//     int temp;
+//     printf("Consumer thread %d launched ...\n", t_id);
+    
+//     sem_wait(&b_lock);
+//     B = B + 3; 
+//     //printf("CB--%d\n", B);
+//     usleep(5);
+//     sem_post(&b_lock);
+
+//     sem_wait(&a_lock);
+//     A = A + 1; 
+//     //printf("CA--%d\n", A);
+//     usleep(5);
+//     sem_post(&a_lock);
+    
+//     //printf("C finished\n");
+    
+// }
