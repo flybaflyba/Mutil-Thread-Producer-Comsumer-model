@@ -19,10 +19,12 @@ int B;
 sem_t b_lock;
 
 #define BUFFER_SIZE 20
-char *buffer[BUFFER_SIZE];
+char buffer[BUFFER_SIZE];
 sem_t buffer_lock;
-sem_t filled_number;
-sem_t empty_number;
+sem_t filled_number_lock;
+sem_t empty_number_lock;
+int filled_number = 0;
+int empty_number = 19;
 
 
 
@@ -60,12 +62,12 @@ int main(int argc, char **argv) {
         perror("Error initizing buffer_lock");
         return 0;
     }
-    if (sem_init(&filled_number, 0, 0) < 0) { 
-        perror("Error initizing filled_number");
+    if (sem_init(&filled_number_lock, 0, 0) < 0) { 
+        perror("Error initizing filled_number_lock");
         return 0;
     }
-    if (sem_init(&empty_number, 0, BUFFER_SIZE) < 0) { 
-        perror("Error initizing empty_number");
+    if (sem_init(&empty_number_lock, 0, BUFFER_SIZE) < 0) { 
+        perror("Error initizing empty_number_lock");
         return 0;
     }
     
@@ -99,41 +101,48 @@ int main(int argc, char **argv) {
     return 0;
 }
 
-// all threads can access to sum, becasue sum is global variable 
 
-void *do_math(void *arg) {
-    int t_id = (int)(long)arg;
+
+
+void bufferGrow() {
+    //generate random number 
+    //srand((unsigned)time(NULL)); // with this line, temps are the same... but I expect them to be different 
     int temp;
-    printf("Thread %d launched ...\n", t_id);
-    for (int n=0; n<100; n++) {
-        sem_wait(&sum_lock); // sum_lock is decremented 1 to 0 now, no thread can get in
-        temp = sum; // critical section, 4 lines 
-        usleep(5);
-        temp++;
-        sum = temp; 
-        sem_post(&sum_lock); // sum_lock is incremented 1 to 1 now, one threaad can get in 
-    }
+    temp = rand() % 100 + 1; // we use only none 0 int, when it's empty, it's 0 
+    printf("produces %d\n", temp);
+    buffer[filled_number] = temp;
+    filled_number++;
+    empty_number--;
+    // for(int i=0; i<BUFFER_SIZE; i++ ) {
+    //     // printf("i is： %d\n", i);
+    //     printf("%d, ", buffer[i]);
+    // }
+    // printf("\n");
+    usleep(10);
 }
 
-
+void bufferShorten() {
+    printf("consumes %d\n", buffer[filled_number-1]);
+    buffer[filled_number-1] = 0;
+    filled_number--;
+    empty_number++;
+    // for(int i=0; i<BUFFER_SIZE; i++ ) {
+    //     // printf("i is： %d\n", i);
+    //     printf("%d, ", buffer[i]);
+    // }
+    // printf("\n");
+}
 
 
 void *produce(void *arg) {
     int t_id = (int)(long)arg;
-    printf("Producer thread %d launched ...\n", t_id);
-    int temp;
-    
-    //generate random number 
-    //srand((unsigned)time(NULL)); // with this line, temps are the same... but I expect them to be different 
-    temp = rand() % 100;
-    printf("%d\n", temp);
-    for( int i = 0; i < BUFFER_SIZE; i ++ ) {
-        // printf("i is： %d\n", i);
-        printf("%s, ", buffer[i]);
-    }
-    printf("\n");
-   
- 
+    //the number of empty spot = how many producers can enter
+    sem_wait(&empty_number_lock); // when a producer enter, empty spot - 1 
+    sem_wait(&buffer_lock);
+    printf("Producer thread %d launched ... ", t_id);
+    bufferGrow();
+    sem_post(&buffer_lock);
+    sem_post(&filled_number_lock); // when a producer exit, fiiled spot + 1 
     
     //printf("P finished\n");
     
@@ -141,9 +150,13 @@ void *produce(void *arg) {
 
 void *consume(void *arg) {
     int t_id = (int)(long)arg;
-    printf("Consumer thread %d launched ...\n", t_id);
-    
-    
+    //the number of fiiled spot = how many consumers can enter
+    sem_wait(&filled_number_lock); // when a consumer enter, filled spot - 1 
+    sem_wait(&buffer_lock);
+    printf("Consumer thread %d launched ... ", t_id);
+    bufferShorten();
+    sem_post(&buffer_lock); 
+    sem_post(&empty_number_lock); // when a comsumer exit, empty spot + 1 
     
     //printf("C finished\n");
     
@@ -191,3 +204,20 @@ void *consume(void *arg) {
 //     //printf("C finished\n");
     
 // }
+
+
+// all threads can access to sum, becasue sum is global variable 
+
+void *do_math(void *arg) {
+    int t_id = (int)(long)arg;
+    int temp;
+    printf("Thread %d launched ...\n", t_id);
+    for (int n=0; n<100; n++) {
+        sem_wait(&sum_lock); // sum_lock is decremented 1 to 0 now, no thread can get in
+        temp = sum; // critical section, 4 lines 
+        usleep(5);
+        temp++;
+        sum = temp; 
+        sem_post(&sum_lock); // sum_lock is incremented 1 to 1 now, one threaad can get in 
+    }
+}
