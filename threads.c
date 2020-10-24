@@ -144,6 +144,16 @@ void *produce(void *arg) {
     sem_post(&buffer_lock);
     sem_post(&filled_number_lock); // when a producer exit, fiiled spot + 1 
     
+    // part b
+    sem_wait(&a_lock);
+    A = A + 1;
+    usleep(5);
+    sem_post(&a_lock);
+    sem_wait(&b_lock);
+    B = B + 2; 
+    usleep(5);
+    sem_post(&b_lock);
+    
     //printf("P finished\n");
     
 }
@@ -157,6 +167,19 @@ void *consume(void *arg) {
     bufferShorten();
     sem_post(&buffer_lock); 
     sem_post(&empty_number_lock); // when a comsumer exit, empty spot + 1 
+    
+    // part b
+    sem_wait(&b_lock);
+    B = B + 3; 
+    //printf("CB--%d\n", B);
+    usleep(5);
+    sem_post(&b_lock);
+
+    sem_wait(&a_lock);
+    A = A + 1; 
+    //printf("CA--%d\n", A);
+    usleep(5);
+    sem_post(&a_lock);
     
     //printf("C finished\n");
     
