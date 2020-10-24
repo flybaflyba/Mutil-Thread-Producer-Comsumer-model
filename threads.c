@@ -13,12 +13,19 @@ void *consume(void * arg);
 
 int sum;
 sem_t sum_lock;
-
 int A;
 sem_t a_lock;
-
 int B;
 sem_t b_lock;
+
+#define BUFFER_SIZE 20
+char *buffer[BUFFER_SIZE];
+sem_t buffer_lock;
+sem_t filled_number;
+sem_t empty_number;
+
+
+
 
 int main(int argc, char **argv) {
     
@@ -47,6 +54,18 @@ int main(int argc, char **argv) {
     }
     if (sem_init(&b_lock, 0, 1) < 0) { 
         perror("Error initizing b_lock");
+        return 0;
+    }
+    if (sem_init(&buffer_lock, 0, 1) < 0) { 
+        perror("Error initizing buffer_lock");
+        return 0;
+    }
+    if (sem_init(&filled_number, 0, 0) < 0) { 
+        perror("Error initizing filled_number");
+        return 0;
+    }
+    if (sem_init(&empty_number, 0, BUFFER_SIZE) < 0) { 
+        perror("Error initizing empty_number");
         return 0;
     }
     
@@ -101,8 +120,18 @@ void *do_math(void *arg) {
 
 void *produce(void *arg) {
     int t_id = (int)(long)arg;
-    int temp;
     printf("Producer thread %d launched ...\n", t_id);
+    int temp;
+    
+    //generate random number 
+    //srand((unsigned)time(NULL)); // with this line, temps are the same... but I expect them to be different 
+    temp = rand() % 100;
+    printf("%d\n", temp);
+    for( int i = 0; i < BUFFER_SIZE; i ++ ) {
+        // printf("i is： %d\n", i);
+        printf("%s, ", buffer[i]);
+    }
+    printf("\n");
    
  
     
@@ -112,7 +141,6 @@ void *produce(void *arg) {
 
 void *consume(void *arg) {
     int t_id = (int)(long)arg;
-    int temp;
     printf("Consumer thread %d launched ...\n", t_id);
     
     
